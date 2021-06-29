@@ -1,0 +1,3 @@
+handle := func(req, res) {
+  res.html("hi?")
+}

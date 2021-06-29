@@ -1,0 +1,5 @@
+- rule: testing\.test:10000\/hi
+  do: call(reverse_proxy)
+
+- rule: testing\.test
+  do: proxy(https://www.google.com)
