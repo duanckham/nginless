@@ -26,6 +26,12 @@ func (n *Nginless) do(d *D, step Step) *D {
 	// proxy($remote_address)
 	case "proxy":
 		return n.doProxy(d, step.Parameters)
+
+	// eg:
+	// balancing($remote_address, ...$remote_address)
+	case "balancing":
+		return n.doBalancing(d, step.Parameters)
+
 	// eg:
 	// call($tengo_script)
 	case "call":
