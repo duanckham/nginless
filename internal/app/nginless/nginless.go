@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -61,7 +62,19 @@ func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Run steps.
-	for _, step := range handler.Steps {
+	for i, step := range handler.Steps {
+		start := time.Now()
+
+		n.logger.Info(
+			".handleTraffic",
+			zap.Int("step", i),
+			zap.String("uri", uri),
+			zap.String("rule", step.Source),
+			zap.String("action", step.Action),
+			zap.Any("parameters", step.Parameters),
+			zap.Duration("took", time.Since(start)),
+		)
+
 		d = n.do(d, step)
 	}
 }

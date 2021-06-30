@@ -2,8 +2,6 @@ package nginless
 
 import (
 	"net/http"
-
-	"go.uber.org/zap"
 )
 
 // D ...
@@ -23,8 +21,6 @@ func (d *D) returnInternalServerError() *D {
 }
 
 func (n *Nginless) do(d *D, step Step) *D {
-	n.logger.Info(".do", zap.String("rule", step.Source), zap.String("action", step.Action), zap.Any("parameters", step.Parameters))
-
 	switch step.Action {
 	// eg:
 	// proxy($remote_address)
