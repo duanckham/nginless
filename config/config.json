@@ -1,0 +1,9 @@
+{
+  "version": "0.0.1",
+  "log": {
+    "path": "/tmp/nginless.log",
+    "maxSize": 1000,
+    "maxBackups": 20,
+    "maxAge": 14
+  }
+}

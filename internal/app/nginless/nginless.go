@@ -11,6 +11,7 @@ import (
 
 // Nginless ...
 type Nginless struct {
+	version string
 	port    int32
 	logger  *zap.Logger
 	router  *Router
@@ -19,7 +20,8 @@ type Nginless struct {
 
 // Options ...
 type Options struct {
-	Logger *zap.Logger
+	Version string
+	Logger  *zap.Logger
 }
 
 // New ...
@@ -32,11 +34,13 @@ func New(options Options) *Nginless {
 
 	router := NewRouter(*routerPath)
 
+	fmt.Printf("*     version: %s\n", options.Version)
 	fmt.Printf("* router path: %s\n", *routerPath)
 	fmt.Printf("* action path: %s\n", *actionPath)
-	fmt.Printf("* port       : %d\n", *port)
+	fmt.Printf("*        port: %d\n", *port)
 
 	return &Nginless{
+		version: options.Version,
 		port:    int32(*port),
 		logger:  options.Logger,
 		router:  router,
@@ -53,6 +57,9 @@ func (n *Nginless) Run() {
 func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {
 	uri := req.Host + req.URL.String()
 	matched, handler := n.router.Match(uri)
+
+	// Write nginless sign into header.
+	w.Header().Add("x-nginless-version", n.version)
 
 	d := &D{req, w, false}
 

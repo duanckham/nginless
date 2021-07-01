@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/duanckham/nginless/internal/app/config"
 	"github.com/duanckham/nginless/internal/app/nginless"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -8,14 +9,16 @@ import (
 )
 
 func main() {
+	c := config.ReadConfig()
+
 	// Log rotate.
 	// Refs:
 	// https://github.com/uber-go/zap/blob/master/FAQ.md#does-zap-support-log-rotation
 	w := zapcore.AddSync(&lumberjack.Logger{
-		Filename:   "/tmp/nginless.log",
-		MaxSize:    1000,
-		MaxBackups: 20,
-		MaxAge:     14,
+		Filename:   c.Log.Path,
+		MaxSize:    c.Log.MaxSize,
+		MaxBackups: c.Log.MaxBackups,
+		MaxAge:     c.Log.MaxAge,
 	})
 
 	logger := zap.New(zapcore.NewCore(
@@ -27,7 +30,8 @@ func main() {
 	defer logger.Sync()
 
 	n := nginless.New(nginless.Options{
-		Logger: logger,
+		Version: c.Version,
+		Logger:  logger,
 	})
 
 	n.Run()
