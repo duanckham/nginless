@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const version = "0.0.1"
+
 // LogConfig ...
 type LogConfig struct {
 	Path       string
@@ -22,7 +24,9 @@ type Config struct {
 
 // ReadConfig read config from JSON file.
 func ReadConfig() Config {
-	c := Config{}
+	c := Config{
+		Version: version,
+	}
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
