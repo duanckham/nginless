@@ -36,6 +36,11 @@ func (n *Nginless) do(d *D, step Step) *D {
 	// call($tengo_script)
 	case "call":
 		return n.doCall(d, step.Parameters)
+
+	// eg:
+	// json({"a":"b"})
+	case "json":
+		return n.doJSON(d, step.Parameters)
 	}
 
 	return d

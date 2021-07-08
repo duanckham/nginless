@@ -6,3 +6,6 @@
 
 - rule: testing.test:10000/proxy
   do: proxy(https://www.google.com, https://www.twitter.com)
+
+- rule: testing.test:10000/header_matching
+  do: json({"success":true,"message":"matching header.useragent"})

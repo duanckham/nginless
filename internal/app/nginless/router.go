@@ -136,7 +136,7 @@ func parseDoString(s string) Step {
 
 		if s[i] != lb && s[i] != rb {
 			if bracketsFound {
-				if s[i] == comma {
+				if s[i] == comma && action != "json" {
 					parameters = append(parameters, t)
 					t = ""
 				} else {
