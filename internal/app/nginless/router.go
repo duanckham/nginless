@@ -2,11 +2,25 @@ package nginless
 
 import (
 	"io/ioutil"
+	"net/http"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/duanckham/go-pcre"
 	"gopkg.in/yaml.v2"
 )
+
+var (
+	lb    = "("[0]
+	rb    = ")"[0]
+	comma = ","[0]
+	space = " "[0]
+)
+
+var singleParameterDoes = []string{"json"}
+
+var reHeaderTest = regexp.MustCompile(`^header\.`)
 
 // Router ...
 type Router struct {
@@ -18,12 +32,20 @@ type Router struct {
 type Rule struct {
 	Condition interface{} `yaml:"rule"`
 	Do        interface{} `yaml:"do"`
+	Test      string      `yaml:"test"`
+}
+
+// Target $A.$B, eg: header.user-agent.
+type Target struct {
+	A string
+	B string
 }
 
 // Handler ...
 type Handler struct {
-	Regex []pcre.Regexp
-	Steps []Step
+	Regex  []pcre.Regexp
+	Steps  []Step
+	Target Target
 }
 
 // Step ...
@@ -47,10 +69,19 @@ func NewRouter(filePath string) *Router {
 }
 
 // Match ...
-func (r *Router) Match(uri string) (bool, Handler) {
+func (r *Router) Match(req *http.Request) (bool, Handler) {
+	s := ""
+
 	for _, v := range r.Handlers {
 		for _, regex := range v.Regex {
-			if regex.MatchString(uri, pcre.ANCHORED) {
+			switch v.Target.A {
+			case "url":
+				s = req.Host + req.URL.String()
+			case "header":
+				s = req.Header.Get(v.Target.B)
+			}
+
+			if regex.MatchString(s, 0) {
 				return true, v
 			}
 		}
@@ -59,7 +90,7 @@ func (r *Router) Match(uri string) (bool, Handler) {
 	return false, Handler{}
 }
 
-// LoadConfig ...
+// loadConfig ...
 func (r *Router) loadConfig(filePath string) {
 	// Read router config file.
 	bytes, err := ioutil.ReadFile(filePath)
@@ -84,12 +115,26 @@ func (r *Router) parse() {
 		// Process condition.
 		switch reflect.ValueOf(v.Condition).Kind() {
 		case reflect.String:
-			handler.Regex = append(handler.Regex, pcre.MustCompile(v.Condition.(string), pcre.ANCHORED))
+			handler.Regex = append(handler.Regex, pcre.MustCompile(v.Condition.(string), 0))
 		case reflect.Slice:
 			for _, c := range v.Condition.([]interface{}) {
-				handler.Regex = append(handler.Regex, pcre.MustCompile(c.(string), pcre.ANCHORED))
+				handler.Regex = append(handler.Regex, pcre.MustCompile(c.(string), 0))
 			}
 		default:
+		}
+
+		// Process target.
+		switch {
+		case reHeaderTest.MatchString(v.Test):
+			t := strings.Split(v.Test, ".")
+			if len(t) != 2 {
+				panic("the matching condition for header is invalid, the correct `test` should be `header.$something`")
+			}
+
+			handler.Target = Target{"header", t[1]}
+
+		default:
+			handler.Target = Target{"url", ""}
 		}
 
 		// Process action.
@@ -115,13 +160,6 @@ func parseSteps(does []interface{}) []Step {
 	return steps
 }
 
-var (
-	lb    = "("[0]
-	rb    = ")"[0]
-	comma = ","[0]
-	space = " "[0]
-)
-
 // parseDoString ...
 func parseDoString(s string) Step {
 	bracketsFound := false
@@ -130,13 +168,13 @@ func parseDoString(s string) Step {
 	t := ""
 
 	for i := 0; i < len(s); i++ {
-		if s[i] == space {
+		if s[i] == space && !isSingleParameter(action) {
 			continue
 		}
 
 		if s[i] != lb && s[i] != rb {
 			if bracketsFound {
-				if s[i] == comma {
+				if s[i] == comma && !isSingleParameter(action) {
 					parameters = append(parameters, t)
 					t = ""
 				} else {
@@ -162,4 +200,14 @@ func parseDoString(s string) Step {
 		Action:     action,
 		Parameters: parameters,
 	}
+}
+
+func isSingleParameter(action string) bool {
+	for _, v := range singleParameterDoes {
+		if v == action {
+			return true
+		}
+	}
+
+	return false
 }

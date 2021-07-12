@@ -1,8 +1,12 @@
-- rule: testing.test:10000/hi
+- rule: testing\.test:10000/hi
   do: call(reverse_proxy)
 
-- rule: testing.test:10000/balancing
+- rule: testing\.test:10000/balancing
   do: balancing(https://www.google.com, https://www.twitter.com)
 
-- rule: testing.test:10000/proxy
+- rule: testing\.test:10000/proxy
   do: proxy(https://www.google.com, https://www.twitter.com)
+
+- rule: AppleWebKit\/\d+\.\d+\s
+  test: header.user-agent
+  do: json({"success":true,"message":"matching header.user-agent"})
