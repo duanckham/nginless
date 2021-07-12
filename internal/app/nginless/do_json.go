@@ -1,6 +1,6 @@
 package nginless
 
-// doCall ...
+// doJSON ...
 func (n *Nginless) doJSON(d *D, parameters []interface{}) *D {
 	s := parameters[0].(string)
 

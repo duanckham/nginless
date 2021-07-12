@@ -55,8 +55,7 @@ func (n *Nginless) Run() {
 }
 
 func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {
-	uri := req.Host + req.URL.String()
-	matched, handler := n.router.Match(uri)
+	matched, handler := n.router.Match(req)
 
 	// Write nginless sign into header.
 	w.Header().Add("x-nginless-version", n.version)
@@ -75,7 +74,7 @@ func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {
 		n.logger.Info(
 			".handleTraffic",
 			zap.Int("step", i),
-			zap.String("uri", uri),
+			zap.String("uri", req.URL.String()),
 			zap.String("rule", step.Source),
 			zap.String("action", step.Action),
 			zap.Any("parameters", step.Parameters),
