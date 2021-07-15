@@ -58,7 +58,7 @@ func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {
 	matched, handler := n.router.Match(req)
 
 	// Write nginless sign into header.
-	w.Header().Add("x-nginless-version", n.version)
+	w.Header().Set("x-nginless-version", n.version)
 
 	d := &D{req, w, false}
 
