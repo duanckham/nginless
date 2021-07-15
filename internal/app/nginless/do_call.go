@@ -79,7 +79,7 @@ func createResModule(d *D) map[string]tengo.Object {
 	return map[string]tengo.Object{
 		"html": &tengo.UserFunction{
 			Name: "html",
-			Value: func(args ...tengo.Object) (ret tengo.Object, err error) {
+			Value: func(args ...tengo.Object) (tengo.Object, error) {
 				if len(args) == 0 {
 					d.returnInternalServerError()
 					d.done = true
@@ -101,7 +101,7 @@ func createResModule(d *D) map[string]tengo.Object {
 			}},
 		"text": &tengo.UserFunction{
 			Name: "text",
-			Value: func(args ...tengo.Object) (ret tengo.Object, err error) {
+			Value: func(args ...tengo.Object) (tengo.Object, error) {
 				if len(args) == 0 {
 					d.returnInternalServerError()
 					d.done = true
@@ -123,7 +123,7 @@ func createResModule(d *D) map[string]tengo.Object {
 			}},
 		"json": &tengo.UserFunction{
 			Name: "json",
-			Value: func(args ...tengo.Object) (ret tengo.Object, err error) {
+			Value: func(args ...tengo.Object) (tengo.Object, error) {
 				if len(args) == 0 {
 					d.returnInternalServerError()
 					d.done = true
@@ -152,7 +152,7 @@ func createResModule(d *D) map[string]tengo.Object {
 
 var fetchFunc = &tengo.UserFunction{
 	Name: "fetch",
-	Value: func(args ...tengo.Object) (ret tengo.Object, err error) {
+	Value: func(args ...tengo.Object) (tengo.Object, error) {
 		if len(args) == 0 {
 			return nil, nil
 		}
