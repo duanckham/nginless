@@ -3,10 +3,8 @@ package nginless
 import (
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -53,11 +51,38 @@ func New(options Options) *Nginless {
 	}
 }
 
-const socking = "/tmp/nginless.sock"
-
 // Run ...
 func (n *Nginless) Run() {
+	// Create listeners.
+	listeners := NewListeners()
+	defer listeners.Close()
 
+	for _, port := range n.ports {
+		// Listen local port.
+		l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", port))
+		if err != nil {
+			panic(err)
+		}
+
+		// Add listen into listeners.
+		go listeners.Bind(l)
+	}
+
+	m := cmux.New(listeners.(net.Listener))
+
+	httpListener := m.Match(cmux.HTTP1Fast())
+
+	go n.startHTTP(httpListener)
+
+	m.Serve()
+}
+
+func (n *Nginless) startHTTP(l net.Listener) {
+	http.HandleFunc("/", n.handleTraffic)
+	http.Serve(l, nil)
+}
+
+func (n *Nginless) startHTTPS(l net.Listener) {
 	// go func() {
 	// 	// Handle HTTPS
 	// 	l, err := net.Listen("tcp", ":443")
@@ -75,97 +100,6 @@ func (n *Nginless) Run() {
 	// 		go n.handleConnection(conn)
 	// 	}
 	// }()
-
-	// http.HandleFunc("/", n.handleTraffic)
-	// http.ListenAndServe(fmt.Sprintf(":%d", n.port), nil)
-
-	var (
-		listener net.Listener
-		err      error
-	)
-
-	// Create listeners.
-	listeners := NewListeners()
-
-	err = os.RemoveAll(socking)
-	if err != nil {
-		panic(err)
-	}
-
-	listener, err = net.Listen("unix", socking)
-	if err != nil {
-		panic(err)
-	}
-	defer listener.Close()
-
-	for _, port := range n.ports {
-		go func(port string) {
-
-			fmt.Println("#1", port)
-
-			// Listen local port.
-			l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", port))
-			if err != nil {
-				panic(err)
-			}
-
-			// Add listen into listeners.
-			listeners.Add(l)
-
-			// for {
-			// 	conn, err := l.Accept()
-
-			// 	fmt.Printf("new connection from %s (%s)\n", conn.RemoteAddr(), port)
-
-			// 	if err != nil {
-			// 		fmt.Println("create connection failed from", conn.RemoteAddr())
-			// 		continue
-			// 	}
-
-			// 	go func() {
-			// 		defer conn.Close()
-
-			// 		entry, err := net.Dial("unix", socking)
-			// 		if err != nil {
-			// 			fmt.Println("error dialing remote", err)
-			// 			return
-			// 		}
-			// 		defer entry.Close()
-
-			// 		fmt.Println("#3")
-
-			// 		closer := make(chan struct{}, 2)
-
-			// 		go copy(closer, entry, conn)
-			// 		go copy(closer, conn, entry)
-
-			// 		<-closer
-
-			// 		fmt.Println("connection complete", conn.RemoteAddr())
-			// 	}()
-			// }
-
-		}(port)
-
-	}
-
-	fmt.Println("#0")
-
-	m := cmux.New(listeners.(net.Listener))
-
-	httpListener := m.Match(cmux.Any())
-
-	go func() {
-		http.HandleFunc("/", n.handleTraffic)
-		http.Serve(httpListener, nil)
-	}()
-
-	m.Serve()
-}
-
-func copy(closer chan struct{}, dst io.Writer, src io.Reader) {
-	_, _ = io.Copy(dst, src)
-	closer <- struct{}{} // connection is closed, send signal to stop proxy
 }
 
 func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {

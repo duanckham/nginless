@@ -1,44 +1,91 @@
 package nginless
 
-import "net"
+import (
+	"net"
+)
+
+// ListenersAddr ...
+type ListenersAddr interface {
+	net.Addr
+}
+
+// listenersAddrImpl ...
+type listenersAddrImpl struct {
+}
+
+// NewListenersAddr ...
+func NewListenersAddr() ListenersAddr {
+	return listenersAddrImpl{}
+}
+
+// Network ...
+func (l listenersAddrImpl) Network() string {
+	return "memory"
+}
+
+// String ...
+func (l listenersAddrImpl) String() string {
+	return "[::]:0"
+}
 
 // Listeners ...
 type Listeners interface {
 	Accept() (net.Conn, error)
 	Close() error
 	Addr() net.Addr
-	Add(listener net.Listener)
+	Bind(listener net.Listener)
 }
 
-// ListenersImpl ...
-type ListenersImpl struct {
-	// listeners []net.Listener
+// listenersImpl ...
+type listenersImpl struct {
+	listeners []net.Listener
+	c         chan accept
+}
+
+type accept struct {
+	conn net.Conn
+	err  error
 }
 
 // NewListeners ...
 func NewListeners() Listeners {
-	return ListenersImpl{
-		// listeners: []net.Listener{},
+	return listenersImpl{
+		c: make(chan accept),
 	}
 }
 
-// Add ...
-func (l ListenersImpl) Add(listener net.Listener) {
+// Bind ...
+func (l listenersImpl) Bind(listener net.Listener) {
+	// Insert into listeners array.
+	l.listeners = append(l.listeners, listener)
 
+	for {
+		conn, err := listener.Accept()
+		l.c <- accept{conn, err}
+	}
 }
 
 // Accept ...
-func (l ListenersImpl) Accept() (net.Conn, error) {
-
-	return nil, nil
+func (l listenersImpl) Accept() (net.Conn, error) {
+	accept := <-l.c
+	return accept.conn, accept.err
 }
 
 // Close ...
-func (l ListenersImpl) Close() error {
-	return nil
+func (l listenersImpl) Close() error {
+	var e error
+
+	for _, listener := range l.listeners {
+		err := listener.Close()
+		if err != nil {
+			e = err
+		}
+	}
+
+	return e
 }
 
 // Addr ...
-func (l ListenersImpl) Addr() net.Addr {
-	return nil
+func (l listenersImpl) Addr() net.Addr {
+	return NewListenersAddr()
 }
