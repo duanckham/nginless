@@ -3,16 +3,20 @@ package nginless
 import (
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/duanckham/nginless/internal/app/common/https"
+	"github.com/soheilhy/cmux"
 	"go.uber.org/zap"
 )
 
 // Nginless ...
 type Nginless struct {
 	version string
-	port    int32
+	ports   []string
 	logger  *zap.Logger
 	router  *Router
 	actions string
@@ -28,7 +32,7 @@ type Options struct {
 func New(options Options) *Nginless {
 	routerPath := flag.String("r", "", "Router config file path")
 	actionPath := flag.String("a", "", "Action files path")
-	port := flag.Int("p", 80, "Listening port")
+	ports := flag.String("p", "80", "Listening ports")
 
 	flag.Parse()
 
@@ -37,11 +41,11 @@ func New(options Options) *Nginless {
 	fmt.Printf("*     version: %s\n", options.Version)
 	fmt.Printf("* router path: %s\n", *routerPath)
 	fmt.Printf("* action path: %s\n", *actionPath)
-	fmt.Printf("*        port: %d\n", *port)
+	fmt.Printf("*       ports: %s\n", *ports)
 
 	return &Nginless{
 		version: options.Version,
-		port:    int32(*port),
+		ports:   strings.Split(*ports, ","),
 		logger:  options.Logger,
 		router:  router,
 		actions: *actionPath,
@@ -50,8 +54,59 @@ func New(options Options) *Nginless {
 
 // Run ...
 func (n *Nginless) Run() {
+	// Create listeners.
+	listeners := NewListeners()
+	defer listeners.Close()
+
+	for _, port := range n.ports {
+		// Listen local port.
+		l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", port))
+		if err != nil {
+			panic(err)
+		}
+
+		// Add listen into listeners.
+		go listeners.Bind(l)
+	}
+
+	m := cmux.New(listeners.(net.Listener))
+
+	httpListener := m.Match(cmux.HTTP1Fast())
+	httpsListener := m.Match(cmux.Any())
+
+	// Start HTTP service.
+	go n.startHTTP(httpListener)
+	// Start HTTPS service.
+	go n.startHTTPS(httpsListener)
+
+	m.Serve()
+}
+
+func (n *Nginless) startHTTP(l net.Listener) {
 	http.HandleFunc("/", n.handleTraffic)
-	http.ListenAndServe(fmt.Sprintf(":%d", n.port), nil)
+	http.Serve(l, nil)
+}
+
+func (n *Nginless) startHTTPS(l net.Listener) {
+	// Pick certificate pairs from all rules.
+	pairs := make([][2]string, len(n.router.Certificates))
+
+	for i, v := range n.router.Certificates {
+		if v.Certificate != "" && v.Key != "" {
+			pairs[i] = [2]string{v.Certificate, v.Key}
+		}
+	}
+
+	// Create HTTPS listener.
+	listener := https.New()
+
+	// Bind original listener.
+	listener.Bind(l)
+
+	// Load all certificate pairs.
+	listener.LoadPairs(pairs)
+
+	http.Serve(listener, nil)
 }
 
 func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {

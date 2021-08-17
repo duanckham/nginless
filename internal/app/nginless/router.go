@@ -22,17 +22,52 @@ var singleParameterDoes = []string{"json"}
 
 var reHeaderTest = regexp.MustCompile(`^header\.`)
 
+// Config is the config yaml file structure.
+//
+// <example: something.yaml>
+// rules:
+//   - rule: testing.test:.*/https
+//     do: call(reverse_proxy)
+//
+//   - rule: testing.test:.*/hi
+//     do: call(reverse_proxy)
+//
+//   - rule: testing.test:.*/balancing
+//     do: balancing(https://www.google.com, https://www.twitter.com)
+//
+//   - rule: testing.test:.*/proxy
+//     do: proxy(https://www.google.com, https://www.twitter.com)
+//
+//   - rule: AppleWebKit\/\d+\.\d+\s
+//     test: header.user-agent
+//     do: json({"success":true,"message":"matching header.user-agent"})
+//
+// certificates:
+//   - certificate: ./examples/testing.test.crt
+//     key: ./examples/testing.test.key
+type Config struct {
+	Rules        []Rule        `yaml:"rules"`
+	Certificates []Certificate `yaml:"certificates"`
+}
+
 // Router ...
 type Router struct {
-	Rules    []Rule
-	Handlers []Handler
+	Rules        []Rule
+	Certificates []Certificate
+	Handlers     []Handler
+}
+
+// Certificate ...
+type Certificate struct {
+	Certificate string `yaml:"certificate"`
+	Key         string `yaml:"key"`
 }
 
 // Rule ...
 type Rule struct {
 	Condition interface{} `yaml:"rule"`
-	Do        interface{} `yaml:"do"`
 	Test      string      `yaml:"test"`
+	Do        interface{} `yaml:"do"`
 }
 
 // Target $A.$B, eg: header.user-agent.
@@ -98,10 +133,15 @@ func (r *Router) loadConfig(filePath string) {
 		panic("router config file do not exist.")
 	}
 
-	err = yaml.Unmarshal(bytes, &r.Rules)
+	config := Config{}
+
+	err = yaml.Unmarshal(bytes, &config)
 	if err != nil {
 		panic("parse router config file failed.")
 	}
+
+	r.Rules = config.Rules
+	r.Certificates = config.Certificates
 }
 
 // parse ...
