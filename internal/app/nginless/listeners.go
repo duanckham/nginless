@@ -15,16 +15,16 @@ type listenersAddrImpl struct {
 
 // NewListenersAddr ...
 func NewListenersAddr() ListenersAddr {
-	return listenersAddrImpl{}
+	return &listenersAddrImpl{}
 }
 
 // Network ...
-func (l listenersAddrImpl) Network() string {
+func (l *listenersAddrImpl) Network() string {
 	return "memory"
 }
 
 // String ...
-func (l listenersAddrImpl) String() string {
+func (l *listenersAddrImpl) String() string {
 	return "[::]:0"
 }
 
@@ -49,30 +49,19 @@ type accept struct {
 
 // NewListeners ...
 func NewListeners() Listeners {
-	return listenersImpl{
+	return &listenersImpl{
 		c: make(chan accept),
 	}
 }
 
-// Bind ...
-func (l listenersImpl) Bind(listener net.Listener) {
-	// Insert into listeners array.
-	l.listeners = append(l.listeners, listener)
-
-	for {
-		conn, err := listener.Accept()
-		l.c <- accept{conn, err}
-	}
-}
-
 // Accept ...
-func (l listenersImpl) Accept() (net.Conn, error) {
+func (l *listenersImpl) Accept() (net.Conn, error) {
 	accept := <-l.c
 	return accept.conn, accept.err
 }
 
 // Close ...
-func (l listenersImpl) Close() error {
+func (l *listenersImpl) Close() error {
 	var e error
 
 	for _, listener := range l.listeners {
@@ -86,6 +75,17 @@ func (l listenersImpl) Close() error {
 }
 
 // Addr ...
-func (l listenersImpl) Addr() net.Addr {
+func (l *listenersImpl) Addr() net.Addr {
 	return NewListenersAddr()
+}
+
+// Bind ...
+func (l *listenersImpl) Bind(listener net.Listener) {
+	// Insert into listeners array.
+	l.listeners = append(l.listeners, listener)
+
+	for {
+		conn, err := listener.Accept()
+		l.c <- accept{conn, err}
+	}
 }

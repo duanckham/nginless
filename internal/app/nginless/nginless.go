@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/duanckham/nginless/internal/app/common/https"
 	"github.com/soheilhy/cmux"
 	"go.uber.org/zap"
 )
@@ -71,8 +72,12 @@ func (n *Nginless) Run() {
 	m := cmux.New(listeners.(net.Listener))
 
 	httpListener := m.Match(cmux.HTTP1Fast())
+	httpsListener := m.Match(cmux.Any())
 
+	// Start HTTP service.
 	go n.startHTTP(httpListener)
+	// Start HTTPS service.
+	go n.startHTTPS(httpsListener)
 
 	m.Serve()
 }
@@ -83,23 +88,25 @@ func (n *Nginless) startHTTP(l net.Listener) {
 }
 
 func (n *Nginless) startHTTPS(l net.Listener) {
-	// go func() {
-	// 	// Handle HTTPS
-	// 	l, err := net.Listen("tcp", ":443")
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
+	// Pick certificate pairs from all rules.
+	pairs := make([][2]string, len(n.router.Certificates))
 
-	// 	for {
-	// 		conn, err := l.Accept()
-	// 		if err != nil {
-	// 			fmt.Println("???", err)
-	// 			continue
-	// 		}
+	for i, v := range n.router.Certificates {
+		if v.Certificate != "" && v.Key != "" {
+			pairs[i] = [2]string{v.Certificate, v.Key}
+		}
+	}
 
-	// 		go n.handleConnection(conn)
-	// 	}
-	// }()
+	// Create HTTPS listener.
+	listener := https.New()
+
+	// Bind original listener.
+	listener.Bind(l)
+
+	// Load all certificate pairs.
+	listener.LoadPairs(pairs)
+
+	http.Serve(listener, nil)
 }
 
 func (n *Nginless) handleTraffic(w http.ResponseWriter, req *http.Request) {
