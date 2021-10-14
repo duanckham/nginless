@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -48,12 +49,17 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 	// Copy response headers.
 	for k, headers := range res.Header {
 		for _, item := range headers {
+			if strings.ToLower(k) == "content-length" {
+				n.logger.Info(fmt.Sprintf(".doProxy original `Content-Length` is %s", item))
+				continue
+			}
+
 			d.res.Header().Add(k, item)
 		}
 	}
 
 	// Copy response body.
-	written, err := io.Copy(d.res, res.Body)
+	written, err := io.CopyBuffer(d.res, res.Body, make([]byte, res.ContentLength))
 	defer res.Body.Close()
 
 	if err != nil {
