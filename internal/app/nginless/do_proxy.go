@@ -66,7 +66,7 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 	d.res.Write(body)
 
 	if err != nil {
-		n.logger.Error(".doProxy copy response failed", zap.Int64("res.ContentLength", res.ContentLength), zap.Int64("written", written), zap.Error(err))
+		n.logger.Error(".doProxy copy response failed", zap.Int64("res.ContentLength", res.ContentLength) /*zap.Int64("written", written),*/, zap.Error(err))
 		return d.returnInternalServerError()
 	}
 
