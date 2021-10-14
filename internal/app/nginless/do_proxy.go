@@ -41,6 +41,7 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 	// Request.
 	res, err := client.Do(req)
 	if err != nil {
+		n.logger.Error(".doProxy send request to remote failed", zap.Error(err))
 		return d.returnInternalServerError()
 	}
 
@@ -54,6 +55,7 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 	// Copy response body.
 	_, err = io.Copy(d.res, res.Body)
 	if err != nil {
+		n.logger.Error(".doProxy copy response failed", zap.Error(err))
 		return d.returnInternalServerError()
 	}
 
