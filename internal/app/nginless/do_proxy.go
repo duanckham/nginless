@@ -50,11 +50,6 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 		return d.returnInternalServerError()
 	}
 
-	// Write status code.
-	// refs:
-	// https://stackoverflow.com/a/26097384/7327205
-	d.res.WriteHeader(res.StatusCode)
-
 	// Copy response headers.
 	for k, headers := range res.Header {
 		for _, item := range headers {
@@ -63,8 +58,15 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 			}
 
 			d.res.Header().Add(k, item)
+
+			fmt.Println(k, item)
 		}
 	}
+
+	// Write status code.
+	// refs:
+	// https://stackoverflow.com/a/26097384/7327205
+	d.res.WriteHeader(res.StatusCode)
 
 	// Copy response body.
 	// refs:
