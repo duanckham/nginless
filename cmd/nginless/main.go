@@ -12,7 +12,7 @@ func main() {
 	c := config.ReadConfig()
 
 	// Log rotate.
-	// Refs:
+	// refs:
 	// https://github.com/uber-go/zap/blob/master/FAQ.md#does-zap-support-log-rotation
 	w := zapcore.AddSync(&lumberjack.Logger{
 		Filename:   c.Log.Path,
