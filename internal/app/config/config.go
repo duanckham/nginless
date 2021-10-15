@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const version = "0.0.3"
+const version = "0.0.4"
 
 // LogConfig ...
 type LogConfig struct {
