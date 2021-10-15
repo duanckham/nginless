@@ -53,13 +53,11 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 	// Copy response headers.
 	for k, headers := range res.Header {
 		for _, item := range headers {
-			if strings.ToLower(k) == "content-length" {
+			if strings.ToLower(k) == "x-nginless-version" {
 				continue
 			}
 
 			d.res.Header().Add(k, item)
-
-			fmt.Println(k, item)
 		}
 	}
 
