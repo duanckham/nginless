@@ -6,17 +6,22 @@ import (
 
 // D ...
 type D struct {
-	req  *http.Request
-	res  http.ResponseWriter
-	done bool
+	req      *http.Request
+	res      http.ResponseWriter
+	finished bool
 }
 
 func (d *D) returnInternalServerError() *D {
-	if !d.done {
+	if !d.finished {
 		d.res.WriteHeader(http.StatusInternalServerError)
-		d.done = true
+		d.finished = true
 	}
 
+	return d
+}
+
+func (d *D) done() *D {
+	d.finished = true
 	return d
 }
 

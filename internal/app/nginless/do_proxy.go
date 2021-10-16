@@ -28,9 +28,13 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 		return d.returnInternalServerError()
 	}
 
+	// Create request client.
 	client := &http.Client{}
 
+	// Build up URI.
 	uri := fmt.Sprintf("%s://%s%s", remote.Scheme, remote.Host, d.req.RequestURI)
+
+	// Build request.
 	req, err := http.NewRequest(d.req.Method, uri, d.req.Body)
 	if err != nil {
 		n.logger.Error(".doProxy create new request failed", zap.Error(err))
@@ -43,7 +47,7 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 		}
 	}
 
-	// Request.
+	// Send to remote server.
 	res, err := client.Do(req)
 	if err != nil {
 		n.logger.Error(".doProxy send request to remote failed", zap.Error(err))
@@ -52,38 +56,33 @@ func (n *Nginless) doProxy(d *D, parameters []interface{}) *D {
 
 	// Copy response headers.
 	for k, headers := range res.Header {
-		for _, item := range headers {
-			if strings.ToLower(k) == "x-nginless-version" {
-				continue
-			}
+		if strings.ToLower(k) == "x-nginless-version" {
+			continue
+		}
 
-			d.res.Header().Add(k, item)
+		for _, item := range headers {
+			d.res.Header().Set(k, item)
 		}
 	}
 
 	// Write status code.
 	// refs:
-	// https://stackoverflow.com/a/26097384/7327205
+	// https://stackoverflow.com/a/26097384
 	d.res.WriteHeader(res.StatusCode)
 
 	// Copy response body.
-	// refs:
-	// https://stackoverflow.com/a/59171167/7327205
-
 	bb := bytebufferpool.Get()
-	written, err := n.copyBuffer(d.res, res.Body, bb.B)
+	n.copyBuffer(d.res, res.Body, bb.B)
 
 	defer res.Body.Close()
 	defer bytebufferpool.Put(bb)
 
 	if err != nil {
-		n.logger.Error(".doProxy copy response failed", zap.Int64("res.ContentLength", res.ContentLength), zap.Int64("written", written), zap.Error(err))
+		n.logger.Error(".doProxy copy response failed", zap.Int64("res.ContentLength", res.ContentLength), zap.Error(err))
 		return d.returnInternalServerError()
 	}
 
-	d.done = true
-
-	return d
+	return d.done()
 }
 
 func (n *Nginless) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int64, error) {
