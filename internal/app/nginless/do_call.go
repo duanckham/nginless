@@ -82,14 +82,14 @@ func createResModule(d *D) map[string]tengo.Object {
 			Value: func(args ...tengo.Object) (tengo.Object, error) {
 				if len(args) == 0 {
 					d.returnInternalServerError()
-					d.done = true
+					d.done()
 					return nil, errors.New("Parameter cannot be empty")
 				}
 
 				arg := args[0]
 
 				d.res.Header().Set("Content-Type", "text/html")
-				d.done = true
+				d.done()
 
 				if arg.TypeName() == "string" {
 					d.res.Write([]byte(arg.(*tengo.String).Value))
@@ -104,14 +104,14 @@ func createResModule(d *D) map[string]tengo.Object {
 			Value: func(args ...tengo.Object) (tengo.Object, error) {
 				if len(args) == 0 {
 					d.returnInternalServerError()
-					d.done = true
+					d.done()
 					return nil, errors.New("Parameter cannot be empty")
 				}
 
 				arg := args[0]
 
 				d.res.Header().Set("Content-Type", "text/plain")
-				d.done = true
+				d.done()
 
 				if arg.TypeName() == "string" {
 					d.res.Write([]byte(arg.(*tengo.String).Value))
@@ -126,7 +126,7 @@ func createResModule(d *D) map[string]tengo.Object {
 			Value: func(args ...tengo.Object) (tengo.Object, error) {
 				if len(args) == 0 {
 					d.returnInternalServerError()
-					d.done = true
+					d.done()
 					return nil, errors.New("Parameter cannot be empty")
 				}
 
@@ -134,7 +134,7 @@ func createResModule(d *D) map[string]tengo.Object {
 
 				if arg.TypeName() != "map" {
 					d.returnInternalServerError()
-					d.done = true
+					d.done()
 					return nil, errors.New("Parameter should be a map")
 				}
 
@@ -143,7 +143,7 @@ func createResModule(d *D) map[string]tengo.Object {
 
 				d.res.Header().Set("Content-Type", "application/json")
 				d.res.Write(b)
-				d.done = true
+				d.done()
 
 				return nil, nil
 			}},
